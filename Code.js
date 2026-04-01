@@ -167,6 +167,8 @@ function snapshotNetWorth() {
     percent
   ]]);
 
+  target.getRange(writeRow, 17).setNumberFormat("0.00%");
+
   formatEvolutionTable(target);
 }
 
