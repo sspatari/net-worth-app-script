@@ -139,7 +139,7 @@ function snapshotNetWorth() {
   const prevRow = writeRow - 1;
 
   if (prevRow >= 2) {
-    prevTotal = target.getRange(prevRow,14).getValue();
+    prevTotal = target.getRange(prevRow,15).getValue();
   }
 
   const change = prevTotal !== null ? total - prevTotal : 0;
@@ -176,6 +176,7 @@ function formatEvolutionTable(sheet){
 
   if (lastRow <= 1) return;
 
+  const totalRange = sheet.getRange(2, 15, lastRow - 1, 1)
   const changeRange = sheet.getRange(2, 16, lastRow - 1, 1);
   const percentRange = sheet.getRange(2, 17, lastRow - 1, 1);
 
@@ -186,7 +187,7 @@ function formatEvolutionTable(sheet){
 
     return !ranges.some(r => {
       const col = r.getColumn();
-      return col === 16 || col === 17;
+      return col === 15 || col === 16 || col === 17;
     });
   });
 
@@ -195,7 +196,7 @@ function formatEvolutionTable(sheet){
       .whenNumberGreaterThan(0)
       .setBackground("#d4edda")
       .setFontColor("#1e7e34")
-      .setRanges([changeRange, percentRange])
+      .setRanges([totalRange, changeRange, percentRange])
       .build();
 
   const negativeRule =
@@ -203,7 +204,7 @@ function formatEvolutionTable(sheet){
       .whenNumberLessThan(0)
       .setBackground("#f8d7da")
       .setFontColor("#c82333")
-      .setRanges([changeRange, percentRange])
+      .setRanges([totalRange, changeRange, percentRange])
       .build();
 
   sheet.setConditionalFormatRules([
