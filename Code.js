@@ -14,6 +14,7 @@ function snapshotNetWorth() {
     "Deposit MAIB USD",
     "Revolut EUR",
     "Revolut USD",
+    "Revolut RON",
     "Cash MAIB MDL",
     "Cash MAIB EUR",
     "Cash VB MDL",
@@ -48,6 +49,7 @@ function snapshotNetWorth() {
       "Deposit MAIB USD":0,
       "Revolut EUR":0,
       "Revolut USD":0,
+      "Revolut RON":0,
       "Cash MAIB MDL":0,
       "Cash MAIB EUR":0,
       "Cash VB MDL":0,
@@ -80,6 +82,8 @@ function snapshotNetWorth() {
 
     else if(name.includes("revolut usd")) assets["Revolut USD"] += value;
 
+    else if(name.includes("revolut ron")) assets["Revolut RON"] += value;
+
     else if(name.includes("cash maib mdl")) assets["Cash MAIB MDL"] += value;
 
     else if(name.includes("cash maib eur")) assets["Cash MAIB EUR"] += value;
@@ -98,6 +102,7 @@ function snapshotNetWorth() {
   assets["Deposit MAIB USD"] +
   assets["Revolut EUR"] +
   assets["Revolut USD"] +
+  assets["Revolut RON"] +
   assets["Cash MAIB MDL"] +
   assets["Cash MAIB EUR"] +
   assets["Cash VB MDL"];
@@ -150,6 +155,7 @@ function snapshotNetWorth() {
     assets["Deposit MAIB USD"],
     assets["Revolut EUR"],
     assets["Revolut USD"],
+    assets["Revolut RON"],
     assets["Cash MAIB MDL"],
     assets["Cash MAIB EUR"],
     assets["Cash VB MDL"],
