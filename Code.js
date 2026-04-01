@@ -147,7 +147,7 @@ function snapshotNetWorth() {
 
   /* ---------- ADD ROW ---------- */
 
-  target.getRange(writeRow,1,1,16).setValues([[
+  target.getRange(writeRow,1,1,17).setValues([[
     firstDay,
     assets["T-Bills"],
     assets["Real Estate"],
@@ -173,12 +173,11 @@ function snapshotNetWorth() {
 function formatEvolutionTable(sheet){
 
   const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
 
   if (lastRow <= 1) return;
 
-  const changeRange = sheet.getRange(2, 15, lastRow - 1, 1);
-  const percentRange = sheet.getRange(2, 16, lastRow - 1, 1);
+  const changeRange = sheet.getRange(2, 16, lastRow - 1, 1);
+  const percentRange = sheet.getRange(2, 17, lastRow - 1, 1);
 
   const existingRules = sheet.getConditionalFormatRules();
 
@@ -187,7 +186,7 @@ function formatEvolutionTable(sheet){
 
     return !ranges.some(r => {
       const col = r.getColumn();
-      return col === 15 || col === 16;
+      return col === 16 || col === 17;
     });
   });
 
