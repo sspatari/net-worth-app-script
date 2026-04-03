@@ -1,3 +1,26 @@
+function snapshotNetWorth() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const source = ss.getSheetByName("Net-Worth");
+  const target = ss.getSheetByName("Net-Worth-Evolution");
+
+  ensureHeaders(target);
+
+  const rows = getSourceRows(source);
+  const assets = computeAssets(rows);
+
+  const { liquid, illiquid, total } = computeTotals(assets);
+
+  const firstDay = getFirstDayOfMonth();
+  const writeRow = getWriteRow(target, firstDay);
+
+  const prevTotal = getPreviousTotal(target, writeRow);
+  const { change, percent } = computeChange(total, prevTotal);
+
+  writeSnapshot(target, writeRow, firstDay, assets, liquid, illiquid, total, change, percent);
+
+  colorizeRow(target, writeRow, change, prevTotal);
+}
+
 function ensureHeaders(sheet) {
   if (sheet.getLastRow() !== 0) return;
 
@@ -162,28 +185,5 @@ function colorizeRow(sheet, row, change, prevTotal) {
   } else if (change < 0) {
     cells.forEach(c => c.setBackground("#f8d7da").setFontColor("#c82333"));
   }
-}
-
-function snapshotNetWorth() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const source = ss.getSheetByName("Net-Worth");
-  const target = ss.getSheetByName("Net-Worth-Evolution");
-
-  ensureHeaders(target);
-
-  const rows = getSourceRows(source);
-  const assets = computeAssets(rows);
-
-  const { liquid, illiquid, total } = computeTotals(assets);
-
-  const firstDay = getFirstDayOfMonth();
-  const writeRow = getWriteRow(target, firstDay);
-
-  const prevTotal = getPreviousTotal(target, writeRow);
-  const { change, percent } = computeChange(total, prevTotal);
-
-  writeSnapshot(target, writeRow, firstDay, assets, liquid, illiquid, total, change, percent);
-
-  colorizeRow(target, writeRow, change, prevTotal);
 }
 
