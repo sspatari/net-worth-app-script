@@ -1,63 +1,37 @@
-function snapshotNetWorth() {
-
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const source = ss.getSheetByName("Net-Worth");
-  const target = ss.getSheetByName("Net-Worth-Evolution");
-
-  /* ---------- CREATE HEADERS IF MISSING ---------- */
+function ensureHeaders(sheet) {
+  if (sheet.getLastRow() !== 0) return;
 
   const headers = [
-    "Date",
-    "T-Bills",
-    "Real Estate",
-    "IBKR",
-    "Deposit MAIB USD",
-    "Revolut EUR",
-    "Revolut USD",
-    "Revolut RON",
-    "Cash MAIB MDL",
-    "Cash MAIB EUR",
-    "Cash VB MDL",
+    "Date","T-Bills","Real Estate","IBKR","Deposit MAIB USD",
+    "Revolut EUR","Revolut USD","Revolut RON",
+    "Cash MAIB MDL","Cash MAIB EUR","Cash VB MDL",
     "Car Huyndai Tucson 2019",
-    "Liquid",
-    "Illiquid",
-    "Total",
-    "Change",
-    "Percent"
+    "Liquid","Illiquid","Total","Change","Percent"
   ];
 
-  if (target.getLastRow() === 0) {
+  sheet.getRange(1,1,1,headers.length).setValues([headers]);
+  sheet.getRange(1,1,1,headers.length)
+    .setFontWeight("bold")
+    .setBackground("#f1f3f4");
 
-    target.getRange(1,1,1,headers.length).setValues([headers]);
+  sheet.getRange(1,1,2,headers.length).applyRowBanding();
+}
 
-    target.getRange(1,1,1,headers.length)
-      .setFontWeight("bold")
-      .setBackground("#f1f3f4");
+function getSourceRows(source) {
+  return source
+    .getRange(2,1,source.getLastRow()-1,3)
+    .getValues();
+}
 
-    target.getRange(1,1,2,headers.length).applyRowBanding();
+function computeAssets(rows) {
+  const assets = {
+    "T-Bills":0,"Real Estate":0,"IBKR":0,"Deposit MAIB USD":0,
+    "Revolut EUR":0,"Revolut USD":0,"Revolut RON":0,
+    "Cash MAIB MDL":0,"Cash MAIB EUR":0,"Cash VB MDL":0,
+    "Car Huyndai Tucson 2019":0
+  };
 
-    }
-
-    /* ---------- LOAD DATA ---------- */
-
-    const rows = source.getRange(2,1,source.getLastRow()-1,3).getValues();
-
-    const assets = {
-      "T-Bills":0,
-      "Real Estate":0,
-      "IBKR":0,
-      "Deposit MAIB USD":0,
-      "Revolut EUR":0,
-      "Revolut USD":0,
-      "Revolut RON":0,
-      "Cash MAIB MDL":0,
-      "Cash MAIB EUR":0,
-      "Cash VB MDL":0,
-      "Car Huyndai Tucson 2019":0
-    };
-
-    rows.forEach(r => {
-
+  rows.forEach(r => {
     const name = String(r[0]).toLowerCase();
     const value = Number(r[2]) || 0;
 
@@ -70,85 +44,85 @@ function snapshotNetWorth() {
       name.includes("property") ||
       name.includes("land") ||
       name.includes("parking")
-    ){
-      assets["Real Estate"] += value;
-    }
+    ) assets["Real Estate"] += value;
 
     else if(name.includes("ibkr")) assets["IBKR"] += value;
-
     else if(name.includes("deposit")) assets["Deposit MAIB USD"] += value;
-
     else if(name.includes("revolut eur")) assets["Revolut EUR"] += value;
-
     else if(name.includes("revolut usd")) assets["Revolut USD"] += value;
-
     else if(name.includes("revolut ron")) assets["Revolut RON"] += value;
-
     else if(name.includes("cash maib mdl")) assets["Cash MAIB MDL"] += value;
-
     else if(name.includes("cash maib eur")) assets["Cash MAIB EUR"] += value;
-
     else if(name.includes("cash vb mdl")) assets["Cash VB MDL"] += value;
-
     else if(name.includes("car")) assets["Car Huyndai Tucson 2019"] += value;
-
   });
 
-  /* ---------- CALCULATIONS ---------- */
+  return assets;
+}
 
+function computeTotals(assets) {
   const liquid =
-  assets["T-Bills"] +
-  assets["IBKR"] +
-  assets["Deposit MAIB USD"] +
-  assets["Revolut EUR"] +
-  assets["Revolut USD"] +
-  assets["Revolut RON"] +
-  assets["Cash MAIB MDL"] +
-  assets["Cash MAIB EUR"] +
-  assets["Cash VB MDL"];
+    assets["T-Bills"] +
+    assets["IBKR"] +
+    assets["Deposit MAIB USD"] +
+    assets["Revolut EUR"] +
+    assets["Revolut USD"] +
+    assets["Revolut RON"] +
+    assets["Cash MAIB MDL"] +
+    assets["Cash MAIB EUR"] +
+    assets["Cash VB MDL"];
 
   const illiquid =
-  assets["Real Estate"] +
-  assets["Car Huyndai Tucson 2019"];
+    assets["Real Estate"] +
+    assets["Car Huyndai Tucson 2019"];
 
-  const total = liquid + illiquid;
+  return {
+    liquid,
+    illiquid,
+    total: liquid + illiquid
+  };
+}
 
+function getFirstDayOfMonth() {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(),today.getMonth(),1);
+  return new Date(today.getFullYear(), today.getMonth(), 1);
+}
 
-  const lastRow = target.getLastRow();
-  
-  let writeRow = lastRow + 1;
+function getWriteRow(sheet, firstDay) {
+  const lastRow = sheet.getLastRow();
 
-  if (lastRow > 1) {
+  if (lastRow <= 1) return lastRow + 1;
 
-    const lastDate = target.getRange(lastRow,1).getValue();
+  const lastDate = sheet.getRange(lastRow,1).getValue();
 
-    if (
-      lastDate instanceof Date &&
-      lastDate.getMonth() === firstDay.getMonth() &&
-      lastDate.getFullYear() === firstDay.getFullYear()
-    ) {
-      writeRow = lastRow; // overwrite instead of adding
-    }
+  if (
+    lastDate instanceof Date &&
+    lastDate.getMonth() === firstDay.getMonth() &&
+    lastDate.getFullYear() === firstDay.getFullYear()
+  ) {
+    return lastRow; // overwrite
   }
 
-  /* ---------- CHANGE CALCULATION ---------- */
-  let prevTotal = null;
+  return lastRow + 1;
+}
 
+function getPreviousTotal(sheet, writeRow) {
   const prevRow = writeRow - 1;
+  if (prevRow < 2) return null;
 
-  if (prevRow >= 2) {
-    prevTotal = target.getRange(prevRow,15).getValue();
-  }
+  return sheet.getRange(prevRow,15).getValue();
+}
 
+function computeChange(total, prevTotal) {
   const change = prevTotal !== null ? total - prevTotal : 0;
   const percent = prevTotal ? change / prevTotal : 0;
 
-  /* ---------- ADD ROW ---------- */
+  return { change, percent };
+}
 
-  target.getRange(writeRow,1,1,17).setValues([[
-    firstDay,
+function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change, percent) {
+  sheet.getRange(row,1,1,17).setValues([[
+    date,
     assets["T-Bills"],
     assets["Real Estate"],
     assets["IBKR"],
@@ -167,30 +141,49 @@ function snapshotNetWorth() {
     percent
   ]]);
 
-  target.getRange(writeRow, 17).setNumberFormat("0.00%");
+  sheet.getRange(row,17).setNumberFormat("0.00%");
+}
 
-  const totalCell   = target.getRange(writeRow, 15);
-  const changeCell  = target.getRange(writeRow, 16);
-  const percentCell = target.getRange(writeRow, 17);
+function colorizeRow(sheet, row, change, prevTotal) {
+  const totalCell   = sheet.getRange(row, 15);
+  const changeCell  = sheet.getRange(row, 16);
+  const percentCell = sheet.getRange(row, 17);
 
-  // reset first (important when overwriting same month)
   [totalCell, changeCell, percentCell].forEach(c => {
     c.setBackground(null).setFontColor(null);
   });
 
-  if (prevTotal !== null) {
-    if (change > 0) {
-      // green
-      [totalCell, changeCell, percentCell].forEach(c => {
-        c.setBackground("#d4edda").setFontColor("#1e7e34");
-      });
+  if (prevTotal === null) return;
 
-    } else if (change < 0) {
-      // red
-      [totalCell, changeCell, percentCell].forEach(c => {
-        c.setBackground("#f8d7da").setFontColor("#c82333");
-      });
-    }
+  const cells = [totalCell, changeCell, percentCell];
+
+  if (change > 0) {
+    cells.forEach(c => c.setBackground("#d4edda").setFontColor("#1e7e34"));
+  } else if (change < 0) {
+    cells.forEach(c => c.setBackground("#f8d7da").setFontColor("#c82333"));
   }
-
 }
+
+function snapshotNetWorth() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const source = ss.getSheetByName("Net-Worth");
+  const target = ss.getSheetByName("Net-Worth-Evolution");
+
+  ensureHeaders(target);
+
+  const rows = getSourceRows(source);
+  const assets = computeAssets(rows);
+
+  const { liquid, illiquid, total } = computeTotals(assets);
+
+  const firstDay = getFirstDayOfMonth();
+  const writeRow = getWriteRow(target, firstDay);
+
+  const prevTotal = getPreviousTotal(target, writeRow);
+  const { change, percent } = computeChange(total, prevTotal);
+
+  writeSnapshot(target, writeRow, firstDay, assets, liquid, illiquid, total, change, percent);
+
+  colorizeRow(target, writeRow, change, prevTotal);
+}
+
