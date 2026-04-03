@@ -172,33 +172,50 @@ function snapshotNetWorth() {
   formatEvolutionTable(target);
 }
 
-function formatEvolutionTable(sheet){
+function formatEvolutionTable(sheet) {
 
   const lastRow = sheet.getLastRow();
-
   if (lastRow <= 1) return;
 
-  const totalRange = sheet.getRange(2, 15, lastRow - 1, 1)
-  const changeRange = sheet.getRange(2, 16, lastRow - 1, 1);
-  const percentRange = sheet.getRange(2, 17, lastRow - 1, 1);
+  const totalRange   = sheet.getRange(2, 15, lastRow - 1, 1); // O
+  const changeRange  = sheet.getRange(2, 16, lastRow - 1, 1); // P
+  const percentRange = sheet.getRange(2, 17, lastRow - 1, 1); // Q
 
   const existingRules = sheet.getConditionalFormatRules();
 
   const filteredRules = existingRules.filter(rule => {
-    const ranges = rule.getRanges();
-
-    return !ranges.some(r => {
+    return !rule.getRanges().some(r => {
       const col = r.getColumn();
       return col === 15 || col === 16 || col === 17;
     });
   });
+
+  /* ---------- TOTAL (compare with previous row) ---------- */
+
+  const totalPositive =
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=$O2>$O1')
+      .setBackground("#d4edda")
+      .setFontColor("#1e7e34")
+      .setRanges([totalRange])
+      .build();
+
+  const totalNegative =
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=$O2<$O1')
+      .setBackground("#f8d7da")
+      .setFontColor("#c82333")
+      .setRanges([totalRange])
+      .build();
+
+  /* ---------- CHANGE + PERCENT ---------- */
 
   const positiveRule =
     SpreadsheetApp.newConditionalFormatRule()
       .whenNumberGreaterThan(0)
       .setBackground("#d4edda")
       .setFontColor("#1e7e34")
-      .setRanges([totalRange, changeRange, percentRange])
+      .setRanges([changeRange, percentRange])
       .build();
 
   const negativeRule =
@@ -206,11 +223,13 @@ function formatEvolutionTable(sheet){
       .whenNumberLessThan(0)
       .setBackground("#f8d7da")
       .setFontColor("#c82333")
-      .setRanges([totalRange, changeRange, percentRange])
+      .setRanges([changeRange, percentRange])
       .build();
 
   sheet.setConditionalFormatRules([
     ...filteredRules,
+    totalPositive,
+    totalNegative,
     positiveRule,
     negativeRule
   ]);
