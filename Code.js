@@ -169,68 +169,28 @@ function snapshotNetWorth() {
 
   target.getRange(writeRow, 17).setNumberFormat("0.00%");
 
-  formatEvolutionTable(target);
-}
+  const totalCell   = target.getRange(writeRow, 15);
+  const changeCell  = target.getRange(writeRow, 16);
+  const percentCell = target.getRange(writeRow, 17);
 
-function formatEvolutionTable(sheet) {
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return;
-
-  const totalRange   = sheet.getRange(2, 15, lastRow - 1, 1); // O
-  const changeRange  = sheet.getRange(2, 16, lastRow - 1, 1); // P
-  const percentRange = sheet.getRange(2, 17, lastRow - 1, 1); // Q
-
-  const existingRules = sheet.getConditionalFormatRules();
-
-  const filteredRules = existingRules.filter(rule => {
-    return !rule.getRanges().some(r => {
-      const col = r.getColumn();
-      return col === 15 || col === 16 || col === 17;
-    });
+  // reset first (important when overwriting same month)
+  [totalCell, changeCell, percentCell].forEach(c => {
+    c.setBackground(null).setFontColor(null);
   });
 
-  /* ---------- TOTAL (compare with previous row) ---------- */
+  if (prevTotal !== null) {
+    if (change > 0) {
+      // green
+      [totalCell, changeCell, percentCell].forEach(c => {
+        c.setBackground("#d4edda").setFontColor("#1e7e34");
+      });
 
-  const totalPositive =
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$O2>$O1')
-      .setBackground("#d4edda")
-      .setFontColor("#1e7e34")
-      .setRanges([totalRange])
-      .build();
+    } else if (change < 0) {
+      // red
+      [totalCell, changeCell, percentCell].forEach(c => {
+        c.setBackground("#f8d7da").setFontColor("#c82333");
+      });
+    }
+  }
 
-  const totalNegative =
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=$O2<$O1')
-      .setBackground("#f8d7da")
-      .setFontColor("#c82333")
-      .setRanges([totalRange])
-      .build();
-
-  /* ---------- CHANGE + PERCENT ---------- */
-
-  const positiveRule =
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberGreaterThan(0)
-      .setBackground("#d4edda")
-      .setFontColor("#1e7e34")
-      .setRanges([changeRange, percentRange])
-      .build();
-
-  const negativeRule =
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberLessThan(0)
-      .setBackground("#f8d7da")
-      .setFontColor("#c82333")
-      .setRanges([changeRange, percentRange])
-      .build();
-
-  sheet.setConditionalFormatRules([
-    ...filteredRules,
-    totalPositive,
-    totalNegative,
-    positiveRule,
-    negativeRule
-  ]);
 }
