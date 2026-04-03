@@ -18,7 +18,7 @@ function snapshotNetWorth() {
 
   writeSnapshot(target, writeRow, firstDay, assets, liquid, illiquid, total, change, percent);
 
-  colorizeRow(target, writeRow, change, prevTotal);
+  colorizeRow(target, writeRow);
 }
 
 function ensureHeaders(sheet) {
@@ -173,23 +173,29 @@ function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change
   sheet.getRange(row,18).setNumberFormat("0.00%");
 }
 
-function colorizeRow(sheet, row, change, prevTotal) {
-  const totalCell   = sheet.getRange(row, 15);
-  const changeCell  = sheet.getRange(row, 17);
-  const percentCell = sheet.getRange(row, 18);
+function colorizeRow(sheet, row) {
+  if (row <= 2) return; // no previous row to compare
 
-  [totalCell, changeCell, percentCell].forEach(c => {
-    c.setBackground(null).setFontColor(null);
-  });
+  const numCols = 18; // total columns
+  const currentValues = sheet.getRange(row, 1, 1, numCols).getValues()[0];
+  const prevValues = sheet.getRange(row - 1, 1, 1, numCols).getValues()[0];
 
-  if (prevTotal === null) return;
+  for (let col = 2; col <= numCols; col++) { // skip Date column (1)
+    const current = Number(currentValues[col - 1]);
+    const prev = Number(prevValues[col - 1]);
 
-  const cells = [totalCell, changeCell, percentCell];
+    if (isNaN(current) || isNaN(prev)) continue;
 
-  if (change > 0) {
-    cells.forEach(c => c.setBackground("#d4edda").setFontColor("#1e7e34"));
-  } else if (change < 0) {
-    cells.forEach(c => c.setBackground("#f8d7da").setFontColor("#c82333"));
+    const cell = sheet.getRange(row, col);
+
+    // reset formatting first
+    cell.setBackground(null).setFontColor(null);
+
+    if (current > prev) {
+      cell.setBackground("#d4edda").setFontColor("#1e7e34"); // green
+    } else if (current < prev) {
+      cell.setBackground("#f8d7da").setFontColor("#c82333"); // red
+    }
   }
 }
 
