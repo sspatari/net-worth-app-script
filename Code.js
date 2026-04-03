@@ -29,7 +29,7 @@ function ensureHeaders(sheet) {
     "Revolut EUR","Revolut USD","Revolut RON",
     "Cash MAIB MDL","Cash MAIB EUR","Cash VB MDL",
     "Car Huyndai Tucson 2019",
-    "Liquid","Illiquid","Total","Change","Percent"
+    "Liquid","Illiquid","Total EUR","Total MDL","Change","Percent"
   ];
 
   sheet.getRange(1,1,1,headers.length).setValues([headers]);
@@ -144,7 +144,7 @@ function computeChange(total, prevTotal) {
 }
 
 function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change, percent) {
-  sheet.getRange(row,1,1,17).setValues([[
+  sheet.getRange(row,1,1,18).setValues([[
     date,
     assets["T-Bills"],
     assets["Real Estate"],
@@ -159,18 +159,24 @@ function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change
     assets["Car Huyndai Tucson 2019"],
     liquid,
     illiquid,
-    total,
+    total, // EUR
+    "",    // MDL (formula)
     change,
     percent
   ]]);
 
-  sheet.getRange(row,17).setNumberFormat("0.00%");
+  // ✅ Live EUR → MDL conversion
+  sheet.getRange(row,16).setFormula(
+    `=O${row}*IFERROR(GOOGLEFINANCE("CURRENCY:EURMDL"),19.5)`
+  );
+
+  sheet.getRange(row,18).setNumberFormat("0.00%");
 }
 
 function colorizeRow(sheet, row, change, prevTotal) {
   const totalCell   = sheet.getRange(row, 15);
-  const changeCell  = sheet.getRange(row, 16);
-  const percentCell = sheet.getRange(row, 17);
+  const changeCell  = sheet.getRange(row, 17);
+  const percentCell = sheet.getRange(row, 18);
 
   [totalCell, changeCell, percentCell].forEach(c => {
     c.setBackground(null).setFontColor(null);
