@@ -29,7 +29,11 @@ function ensureHeaders(sheet) {
     "Revolut EUR","Revolut USD","Revolut RON",
     "Cash MAIB MDL","Cash MAIB EUR","Cash VB MDL",
     "Car Huyndai Tucson 2019",
-    "Liquid","Illiquid","Total EUR","Total MDL","Change","Percent"
+    "Liquid","Illiquid",
+    "Total EUR","Total MDL","Total USD",
+    "Change EUR","Percent EUR",
+    "Change MDL","Percent MDL",
+    "Change USD","Percent USD"
   ];
 
   sheet.getRange(1,1,1,headers.length).setValues([headers]);
@@ -143,8 +147,8 @@ function computeChange(total, prevTotal) {
   return { change, percent };
 }
 
-function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change, percent) {
-  sheet.getRange(row,1,1,18).setValues([[
+function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, changeEUR, percentEUR) {
+  sheet.getRange(row,1,1,23).setValues([[
     date,
     assets["T-Bills"],
     assets["Real Estate"],
@@ -159,24 +163,44 @@ function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change
     assets["Car Huyndai Tucson 2019"],
     liquid,
     illiquid,
-    total, // EUR
-    "",    // MDL (formula)
-    change,
-    percent
+    total, // 15 EUR
+    "",    // 16 MDL (formula)
+    "",    // 17 USD (formula)
+    changeEUR,  // 18
+    percentEUR, // 19
+    "", "",     // 20-21 MDL
+    "", ""      // 22-23 USD
   ]]);
 
-  // ✅ Live EUR → MDL conversion
+  // --- Currency conversions ---
   sheet.getRange(row,16).setFormula(
     `=O${row}*IFERROR(GOOGLEFINANCE("CURRENCY:EURMDL"),19.5)`
   );
 
-  sheet.getRange(row,18).setNumberFormat("0.00%");
+  sheet.getRange(row,17).setFormula(
+    `=O${row}*IFERROR(GOOGLEFINANCE("CURRENCY:EURUSD"),1.1)`
+  );
+
+  // --- MDL change ---
+  if (row > 2) {
+    sheet.getRange(row,20).setFormula(`=P${row}-P${row-1}`);
+    sheet.getRange(row,21).setFormula(`=IFERROR(T${row}/P${row-1},0)`);
+
+    // --- USD change ---
+    sheet.getRange(row,22).setFormula(`=Q${row}-Q${row-1}`);
+    sheet.getRange(row,23).setFormula(`=IFERROR(V${row}/Q${row-1},0)`);
+  }
+
+  // --- Percent formatting ---
+  sheet.getRange(row,19).setNumberFormat("0.00%");
+  sheet.getRange(row,21).setNumberFormat("0.00%");
+  sheet.getRange(row,23).setNumberFormat("0.00%");
 }
 
 function colorizeRow(sheet, row) {
   if (row <= 2) return; // no previous row to compare
 
-  const numCols = 18; // total columns
+  const numCols = 23; // total columns
   const currentValues = sheet.getRange(row, 1, 1, numCols).getValues()[0];
   const prevValues = sheet.getRange(row - 1, 1, 1, numCols).getValues()[0];
 
@@ -198,4 +222,3 @@ function colorizeRow(sheet, row) {
     }
   }
 }
-
