@@ -8,17 +8,59 @@ function snapshotNetWorth() {
   const rows = getSourceRows(source);
   const assets = computeAssets(rows);
 
-  const { liquid, illiquid, total } = computeTotals(assets);
+  const { liquid, illiquid } = computeTotals(assets);
+  const totals = getSourceTotals(source);
 
   const firstDay = getFirstDayOfMonth();
   const writeRow = getWriteRow(target, firstDay);
 
-  const prevTotal = getPreviousTotal(target, writeRow);
-  const { change, percent } = computeChange(total, prevTotal);
+  const prev = getPreviousTotals(target, writeRow);
 
-  writeSnapshot(target, writeRow, firstDay, assets, liquid, illiquid, total, change, percent);
+  const eurChange = computeChanges(totals.eur, prev.eur);
+  const mdlChange = computeChanges(totals.mdl, prev.mdl);
+  const usdChange = computeChanges(totals.usd, prev.usd);
+
+  writeSnapshot(
+  target,
+  writeRow,
+  firstDay,
+  assets,
+  liquid,
+  illiquid,
+  totals,
+  eurChange,
+  mdlChange,
+  usdChange
+  );
 
   colorizeRow(target, writeRow);
+}
+
+function getSourceTotals(source) {
+  const lastRow = source.getLastRow();
+
+  const mdl = source.getRange(lastRow, 2).getValue();
+  const eur = source.getRange(lastRow, 3).getValue();
+  const usd = source.getRange(lastRow, 4).getValue();
+
+  return { mdl, eur, usd };
+}
+
+function getPreviousTotals(sheet, writeRow) {
+  const prevRow = writeRow - 1;
+  if (prevRow < 2) return { eur: null, mdl: null, usd: null };
+
+  return {
+    eur: sheet.getRange(prevRow, 15).getValue(),
+    mdl: sheet.getRange(prevRow, 16).getValue(),
+    usd: sheet.getRange(prevRow, 17).getValue()
+  };
+}
+
+function computeChanges(current, previous) {
+  const change = previous !== null ? current - previous : 0;
+  const percent = previous ? change / previous : 0;
+  return { change, percent };
 }
 
 function ensureHeaders(sheet) {
@@ -105,8 +147,7 @@ function computeTotals(assets) {
 
   return {
     liquid,
-    illiquid,
-    total: liquid + illiquid
+    illiquid
   };
 }
 
@@ -133,22 +174,19 @@ function getWriteRow(sheet, firstDay) {
   return lastRow + 1;
 }
 
-function getPreviousTotal(sheet, writeRow) {
-  const prevRow = writeRow - 1;
-  if (prevRow < 2) return null;
-
-  return sheet.getRange(prevRow,15).getValue();
-}
-
-function computeChange(total, prevTotal) {
-  const change = prevTotal !== null ? total - prevTotal : 0;
-  const percent = prevTotal ? change / prevTotal : 0;
-
-  return { change, percent };
-}
-
-function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, changeEUR, percentEUR) {
-  sheet.getRange(row,1,1,23).setValues([[
+function writeSnapshot(
+  sheet,
+  row,
+  date,
+  assets,
+  liquid,
+  illiquid,
+  totals,
+  eurChange,
+  mdlChange,
+  usdChange
+) {
+  sheet.getRange(row, 1, 1, 23).setValues([[
     date,
     assets["T-Bills"],
     assets["Real Estate"],
@@ -163,38 +201,21 @@ function writeSnapshot(sheet, row, date, assets, liquid, illiquid, total, change
     assets["Car Huyndai Tucson 2019"],
     liquid,
     illiquid,
-    total, // 15 EUR
-    "",    // 16 MDL (formula)
-    "",    // 17 USD (formula)
-    changeEUR,  // 18
-    percentEUR, // 19
-    "", "",     // 20-21 MDL
-    "", ""      // 22-23 USD
+    totals.eur, // 15
+    totals.mdl, // 16
+    totals.usd, // 17
+    eurChange.change,   // 18
+    eurChange.percent,  // 19
+    mdlChange.change,   // 20
+    mdlChange.percent,  // 21
+    usdChange.change,   // 22
+    usdChange.percent   // 23
   ]]);
 
-  // --- Currency conversions ---
-  sheet.getRange(row,16).setFormula(
-    `=O${row}*IFERROR(GOOGLEFINANCE("CURRENCY:EURMDL"),19.5)`
-  );
-
-  sheet.getRange(row,17).setFormula(
-    `=O${row}*IFERROR(GOOGLEFINANCE("CURRENCY:EURUSD"),1.1)`
-  );
-
-  // --- MDL change ---
-  if (row > 2) {
-    sheet.getRange(row,20).setFormula(`=P${row}-P${row-1}`);
-    sheet.getRange(row,21).setFormula(`=IFERROR(T${row}/P${row-1},0)`);
-
-    // --- USD change ---
-    sheet.getRange(row,22).setFormula(`=Q${row}-Q${row-1}`);
-    sheet.getRange(row,23).setFormula(`=IFERROR(V${row}/Q${row-1},0)`);
-  }
-
-  // --- Percent formatting ---
-  sheet.getRange(row,19).setNumberFormat("0.00%");
-  sheet.getRange(row,21).setNumberFormat("0.00%");
-  sheet.getRange(row,23).setNumberFormat("0.00%");
+  // format percentages
+  sheet.getRange(row, 19).setNumberFormat("0.00%");
+  sheet.getRange(row, 21).setNumberFormat("0.00%");
+  sheet.getRange(row, 23).setNumberFormat("0.00%");
 }
 
 function colorizeRow(sheet, row) {
