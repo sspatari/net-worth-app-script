@@ -221,25 +221,38 @@ function writeSnapshot(
 function colorizeRow(sheet, row) {
   if (row <= 2) return; // no previous row to compare
 
-  const numCols = 23; // total columns
+  const numCols = 23;
   const currentValues = sheet.getRange(row, 1, 1, numCols).getValues()[0];
   const prevValues = sheet.getRange(row - 1, 1, 1, numCols).getValues()[0];
 
-  for (let col = 2; col <= numCols; col++) { // skip Date column (1)
+  for (let col = 2; col <= numCols; col++) {
     const current = Number(currentValues[col - 1]);
     const prev = Number(prevValues[col - 1]);
 
-    if (isNaN(current) || isNaN(prev)) continue;
+    if (isNaN(current)) continue;
 
     const cell = sheet.getRange(row, col);
 
-    // reset formatting first
+    // reset formatting
     cell.setBackground(null).setFontColor(null);
 
+    // Change / Percent columns: compare against 0
+    if ([18, 19, 20, 21, 22, 23].includes(col)) {
+      if (current > 0) {
+        cell.setBackground("#d4edda").setFontColor("#1e7e34");
+      } else if (current < 0) {
+        cell.setBackground("#f8d7da").setFontColor("#c82333");
+      }
+      continue;
+    }
+
+    // All other columns: compare against previous month
+    if (isNaN(prev)) continue;
+
     if (current > prev) {
-      cell.setBackground("#d4edda").setFontColor("#1e7e34"); // green
+      cell.setBackground("#d4edda").setFontColor("#1e7e34");
     } else if (current < prev) {
-      cell.setBackground("#f8d7da").setFontColor("#c82333"); // red
+      cell.setBackground("#f8d7da").setFontColor("#c82333");
     }
   }
 }
